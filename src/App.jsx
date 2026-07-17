@@ -184,9 +184,10 @@ export default function App() {
   });
   const [nextId, setNextId] = useState(10);
   const [nextGroupNum, setNextGroupNum] = useState(1);
-  const [addMode, setAddMode] = useState("novo"); // 'novo' | 'existente'
   const [existingPickId, setExistingPickId] = useState(null);
   const [viewingFriendId, setViewingFriendId] = useState(null);
+  const [friendsListOpen, setFriendsListOpen] = useState(false);
+  const [createAccountOpen, setCreateAccountOpen] = useState(false);
 
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState("");
@@ -228,17 +229,15 @@ export default function App() {
     setSelectedId(null);
   }
 
-  function handleAddMember() {
+  function handleCreateAccount() {
     if (!newName.trim() || !newBirthday) return;
     const mmdd = newBirthday.slice(5, 10);
     const id = nextId;
     const created = { id, name: newName.trim(), role: newRole.trim() || "Novo participante", birthday: mmdd, wishlist: [] };
     setMembers((prev) => withDays([...prev, created]));
-    setGroups((prev) => prev.map((g) => (g.id === currentGroupId ? { ...g, memberIds: [...g.memberIds, id] } : g)));
-    setSelectedId(id);
     setCurrentUserId(id);
     setNextId(id + 1);
-    setAddFormOpen(false);
+    setCreateAccountOpen(false);
     setNewName(""); setNewRole(""); setNewBirthday("");
     setView("perfil"); // leva a pessoa direto pra completar o perfil dela
   }
@@ -249,7 +248,6 @@ export default function App() {
     setSelectedId(existingPickId);
     setAddFormOpen(false);
     setExistingPickId(null);
-    setAddMode("novo");
   }
 
   function updateCurrentUser(field, value) {
@@ -315,16 +313,37 @@ export default function App() {
           </button>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setCreateAccountOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+            style={primaryBtnStyle}>
+            <UserPlus size={13} /> Criar conta
+          </button>
           <span className="text-xs text-textMuted font-medium">logado como</span>
           <select
             value={currentUserId}
             onChange={(e) => setCurrentUserId(Number(e.target.value))}
             className="text-sm font-semibold bg-panelAlt border border-line rounded-lg px-3 py-2 cursor-pointer"
           >
-            {groupMembers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         </div>
       </div>
+
+      {createAccountOpen && (
+        <div className="mt-3 bg-panel border border-line rounded-2xl p-4 shadow-md max-w-md">
+          <div className="text-xs font-bold uppercase tracking-wide text-textMuted mb-2">Criar minha conta</div>
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Seu nome"
+            className={`${inputClass} w-full mb-2`} />
+          <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Seu cargo / papel"
+            className={`${inputClass} w-full mb-2`} />
+          <input type="date" value={newBirthday} onChange={(e) => setNewBirthday(e.target.value)}
+            className={`${inputClass} w-full mb-3`} />
+          <div className="flex gap-2">
+            <button onClick={() => setCreateAccountOpen(false)} className="flex-1 text-sm font-bold py-2 rounded-lg bg-panelAlt border border-line text-textMuted">CANCELAR</button>
+            <button onClick={handleCreateAccount} className="flex-1 text-sm font-bold py-2 rounded-lg text-white" style={primaryBtnStyle}>CRIAR CONTA</button>
+          </div>
+        </div>
+      )}
 
       {addGroupOpen && (
         <div className="mt-3 bg-panel border border-line rounded-2xl p-4 shadow-md flex gap-2 flex-wrap items-center">
@@ -420,20 +439,28 @@ export default function App() {
           <p className="text-xs text-textMuted mt-3 px-1">Essa lista vale pra qualquer grupo que você participar.</p>
 
           <div className="mt-4 bg-panelAlt border border-line rounded-2xl p-5">
-            <span className="text-xs font-bold uppercase tracking-wide text-textMuted">Meus amigos no app · {friends.length}</span>
-            <div className="mt-3 flex flex-col gap-2">
-              {friends.map((f) => (
-                <button key={f.id} onClick={() => setViewingFriendId(f.id)}
-                  className="flex items-center gap-3 p-2.5 bg-panel rounded-xl border border-line shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-sealSoft transition-all text-left">
-                  <Seal days={f.daysLeft} size={38} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-bold">{f.name}</div>
-                    <div className="text-xs text-textMuted">{f.role}</div>
-                  </div>
-                  <ChevronRight size={15} className="text-textMuted" />
-                </button>
-              ))}
-            </div>
+            <button onClick={() => setFriendsListOpen((v) => !v)} className="flex items-center gap-2 w-full text-left">
+              <span className="text-2xl font-extrabold text-text">{friends.length}</span>
+              <span className="text-xs font-bold uppercase tracking-wide text-textMuted">
+                {friends.length === 1 ? "amigo no app" : "amigos no app"}
+              </span>
+              <ChevronRight size={15} className={`text-textMuted ml-auto transition-transform ${friendsListOpen ? "rotate-90" : ""}`} />
+            </button>
+            {friendsListOpen && (
+              <div className="mt-3 pt-3 border-t border-line flex flex-col gap-2">
+                {friends.map((f) => (
+                  <button key={f.id} onClick={() => setViewingFriendId(f.id)}
+                    className="flex items-center gap-3 p-2.5 bg-panel rounded-xl border border-line shadow-sm hover:-translate-y-0.5 hover:shadow-md hover:border-sealSoft transition-all text-left">
+                    <Seal days={f.daysLeft} size={38} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold">{f.name}</div>
+                      <div className="text-xs text-textMuted">{f.role}</div>
+                    </div>
+                    <ChevronRight size={15} className="text-textMuted" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         )
@@ -450,49 +477,22 @@ export default function App() {
             <div className="flex-1 w-full lg:max-w-xs flex flex-col gap-2">
               {addFormOpen ? (
                 <div className="bg-panel border border-line rounded-2xl p-4 shadow-md">
-                  <div className="flex gap-1.5 mb-3">
-                    <button onClick={() => setAddMode("novo")}
-                      className={`flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors ${addMode === "novo" ? "bg-seal/15 text-sealDark" : "bg-panelAlt text-textMuted"}`}>
-                      Pessoa nova
-                    </button>
-                    <button onClick={() => setAddMode("existente")}
-                      className={`flex-1 text-xs font-bold py-1.5 rounded-lg transition-colors ${addMode === "existente" ? "bg-seal/15 text-sealDark" : "bg-panelAlt text-textMuted"}`}>
-                      Já existe no app
-                    </button>
-                  </div>
-                  {addMode === "novo" ? (
-                    <>
-                      <div className="text-xs font-bold uppercase tracking-wide text-textMuted mb-2">Novo participante</div>
-                      <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Seu nome"
-                        className={`${inputClass} w-full mb-2`} />
-                      <input value={newRole} onChange={(e) => setNewRole(e.target.value)} placeholder="Seu cargo / papel"
-                        className={`${inputClass} w-full mb-2`} />
-                      <input type="date" value={newBirthday} onChange={(e) => setNewBirthday(e.target.value)}
-                        className={`${inputClass} w-full mb-3`} />
-                      <div className="flex gap-2">
-                        <button onClick={() => setAddFormOpen(false)} className="flex-1 text-sm font-bold py-2 rounded-lg bg-panelAlt border border-line text-textMuted">CANCELAR</button>
-                        <button onClick={handleAddMember} className="flex-1 text-sm font-bold py-2 rounded-lg text-white" style={primaryBtnStyle}>ENTRAR NO GRUPO</button>
-                      </div>
-                    </>
+                  <div className="text-xs font-bold uppercase tracking-wide text-textMuted mb-2">Adicionar participante</div>
+                  <p className="text-xs text-textMuted mb-3">Só é possível adicionar quem já tem uma conta no Surpresa.</p>
+                  {eligibleExisting.length === 0 ? (
+                    <p className="text-xs text-textMuted mb-3">Ninguém disponível ainda — peça pra pessoa criar a conta dela primeiro (botão "Criar conta" no topo).</p>
                   ) : (
-                    <>
-                      <div className="text-xs font-bold uppercase tracking-wide text-textMuted mb-2">Adicionar quem já está no app</div>
-                      {eligibleExisting.length === 0 ? (
-                        <p className="text-xs text-textMuted mb-3">Todo mundo que já existe no app já está nesse grupo.</p>
-                      ) : (
-                        <select value={existingPickId ?? ""} onChange={(e) => setExistingPickId(Number(e.target.value))}
-                          className={`${inputClass} w-full mb-3 bg-white`}>
-                          <option value="" disabled>Escolha uma pessoa</option>
-                          {eligibleExisting.map((m) => <option key={m.id} value={m.id}>{m.name} · {m.role}</option>)}
-                        </select>
-                      )}
-                      <div className="flex gap-2">
-                        <button onClick={() => setAddFormOpen(false)} className="flex-1 text-sm font-bold py-2 rounded-lg bg-panelAlt border border-line text-textMuted">CANCELAR</button>
-                        <button onClick={handleAddExistingMember} disabled={eligibleExisting.length === 0}
-                          className="flex-1 text-sm font-bold py-2 rounded-lg text-white disabled:opacity-40" style={primaryBtnStyle}>ADICIONAR AO GRUPO</button>
-                      </div>
-                    </>
+                    <select value={existingPickId ?? ""} onChange={(e) => setExistingPickId(Number(e.target.value))}
+                      className={`${inputClass} w-full mb-3 bg-white`}>
+                      <option value="" disabled>Escolha uma pessoa</option>
+                      {eligibleExisting.map((m) => <option key={m.id} value={m.id}>{m.name} · {m.role}</option>)}
+                    </select>
                   )}
+                  <div className="flex gap-2">
+                    <button onClick={() => setAddFormOpen(false)} className="flex-1 text-sm font-bold py-2 rounded-lg bg-panelAlt border border-line text-textMuted">CANCELAR</button>
+                    <button onClick={handleAddExistingMember} disabled={eligibleExisting.length === 0}
+                      className="flex-1 text-sm font-bold py-2 rounded-lg text-white disabled:opacity-40" style={primaryBtnStyle}>ADICIONAR AO GRUPO</button>
+                  </div>
                 </div>
               ) : (
                 <button onClick={() => setAddFormOpen(true)}
